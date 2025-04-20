@@ -103,6 +103,7 @@ function l2 {
             if ($input -match 'y') {
                 L3 -L3 $true
             } elseif ($input -match 'n') {exit}
+            cls
         }
     } else {Get-Partition -DriveLetter $ad[0] | Remove-PartitionAccessPath -AccessPath "$($ad[0]):\"}
 }
@@ -110,7 +111,17 @@ function l2 {
 function l3 {
     param([bool]$L3 = $false)
     if ($($(Get-PSDrive -Name C).Free / 1MB) -ge $($($esize + 5MB) / 1MB)){
-        
+        if (!$L3) {
+            while ($true) {
+                Write-Warning "It appears that the less invasive cleanup has not been executed. Please re-run the script and select options 2 and 3 to perform the less invasive cleanup prior to proceeding."
+                $input = Read-Host "Type 'yes' if you wish to continue"
+                if ($input -match 'y') {
+                    #INSERT SPECIAL SCRIPT
+                } elseif ($input -match 'n') {exit}
+                cls
+            }
+            
+        }
     } else {
         Write-Warning "Warning you do not have enough space to recreate the EFI partition."
         Read-Host " "
