@@ -39,7 +39,7 @@ function main {
         }
         if ($o2 -eq '✓') {
             l2
-            if ($o3 -eq '✓') {l3 -L3 $true}
+            if ($o3 -eq '✓') {l2 -L3 $true}
         }
         if (($o3 -eq '✓') -and ($o2 -eq 'X')) {
             l3
@@ -78,7 +78,7 @@ function l1 {
 }
 
 function l2 {
-    
+    param([bool]$L3 = $false)
     #Mounts System Reserved Partition
     Get-Partition `
         | Where-Object GptType -eq "{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}" `
@@ -97,7 +97,14 @@ function l2 {
         Write-Warning "System Reserved Partition more than 15MB already."
     }
 
-    Get-Partition -DriveLetter $ad[0] | Remove-PartitionAccessPath -AccessPath "$($ad[0]):\"
+    if ($L3) {
+        while ($true) {
+            $input = Read-Host "Type 'yes' to continue to resize the partition"
+            if ($input -match 'y') {
+                L3 -L3 $true
+            } elseif ($input -match 'n') {exit}
+        }
+    } else {Get-Partition -DriveLetter $ad[0] | Remove-PartitionAccessPath -AccessPath "$($ad[0]):\"}
 }
 
 function l3 {
