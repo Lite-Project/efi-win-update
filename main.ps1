@@ -1,8 +1,7 @@
-﻿# 
-#=====---v---=====#=====---v---=====#=-Default  Param-=#=====---v---=====#=====---v---=====#=====---v---=====#
+﻿#=====---v---=====#=====---v---=====#=-Default  Param-=#=====---v---=====#=====---v---=====#=====---v---=====#
 $o1 = 'X'
 $o2 = 'X'
-$o3 = 'X'
+$o3 = 'X' # Needs to stay X on default for error checking
 
 $sfcE = "Windows Resource Protection found corrupt files but was unable"
 $dismE = "Error"
@@ -103,7 +102,13 @@ function l2 {
 
 function l3 {
     param([bool]$L3 = $false)
-
+    if ($($(Get-PSDrive -Name C).Free / 1MB) -ge $($($esize + 5MB) / 1MB)){
+        
+    } else {
+        Write-Warning "Warning you do not have enough space to recreate the EFI partition."
+        Read-Host " "
+        exit
+    }
 }
 
 main
