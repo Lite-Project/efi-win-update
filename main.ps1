@@ -16,7 +16,7 @@ $esize = 512MB
 #=====---^---=====#=====---^---=====#=====---^---=====#=====---^---=====#=====---^---=====#=====---^---=====#
 
 function main {
-    cls
+    Clear-Host
     Write-Host @"
 
 
@@ -24,18 +24,18 @@ function main {
 2.  [$o2] Clear Fonts in EFI partition
 3.  [$o3] Recreate EFI Partition
 "@
-    $input = Read-Host "Please select which option you'd like to run"
-    if ($input -eq '1') {
+    $ipt = Read-Host "Please select which option you'd like to run"
+    if ($ipt -eq '1') {
         if ($o1 -eq 'X') {$o1 = '✓'} else {$o1 = 'X'}
-    } elseif ($input -eq '2') {
+    } elseif ($ipt -eq '2') {
         if ($o2 -eq 'X') {$o2 = '✓'} else {$o2 = 'X'}
-    } elseif ($input -eq '3') {
+    } elseif ($ipt -eq '3') {
         if ($ad.Count -lt 2) {
             Write-Warning "There are insufficient available drive letters to select this operation."
             Read-Host " "
         } elseif ($o3 -eq 'X') {$o3 = '✓'} else {$o3 = 'X'}
     }
-    if (($input -eq '') -and (($o1 -eq '✓') -or ($o2 -eq '✓') -or ($o3 -eq '✓'))) {
+    if (($ipt -eq '') -and (($o1 -eq '✓') -or ($o2 -eq '✓') -or ($o3 -eq '✓'))) {
         if ($o1 -eq '✓') {
             l1
         }
@@ -55,7 +55,7 @@ function l1 {
 
     Write-Host "Running SFC now."
     & cmd.exe /c "sfc /scannow" 2>&1 | ForEach-Object {
-        cls
+        Clear-Host
         $line = $_.Replace("`0","")
         Write-Host "SFC: $line"  # Display live updates in the terminal
         $sout += $line  # Append each line to the output array
@@ -66,7 +66,7 @@ function l1 {
         exit
     }
     & cmd.exe /c "dism /online /cleanup-image /restorehealth" 2>&1 | ForEach-Object {
-        cls
+        Clear-Host
         Write-Host "DISM: $_"  # Display live updates in the terminal
         $dout += $_  # Append each line to the output array
     }
@@ -101,31 +101,48 @@ function l2 {
 
     if ($L3) {
         while ($true) {
-            $input = Read-Host "Type 'yes' to continue to resize the partition"
-            if ($input -match 'y') {
+            $ipt = Read-Host "Type 'yes' to continue to resize the partition"
+            if ($ipt -match 'y') {
                 L3 -L3 $true
-            } elseif ($input -match 'n') {exit}
-            cls
+            } elseif ($ipt -match 'n') {exit}
+            Clear-Host
         }
     } else {Get-Partition -DriveLetter $ad[0] | Remove-PartitionAccessPath -AccessPath "$($ad[0]):\"}
 }
 
 function l3 {
     param([bool]$L3 = $false)
-    if ($($(Get-PSDrive -Name C).Free / 1MB) -ge $($($esize + 5MB) / 1MB)){
-        if (!$L3) {
-            while ($true) {
-                Write-Warning @"
+    $w1 = @"
 #===---~---===#===---~---===#USE AT YOUR OWN RISK#===---~---===#===---~---===#
 It appears that the less invasive cleanup has not been executed.
 Please re-run the script and select options 2 and 3 to perform the less invasive cleanup prior to proceeding.
 
+
+"@
+    if ($($(Get-PSDrive -Name C).Free / 1MB) -ge $($($esize + 5MB) / 1MB)){
+        while ($true) {
+            if (!$L3) {
+                Write-Warning $w1
+            }
+            Write-Warning @"
 #===---~---===#===---~---===#USE AT YOUR OWN RISK#===---~---===#===---~---===#
 PLEASE REMEMBER THIS IS STILL EXPERIMENTAL. 
 "@
-                $input = Read-Host "Type 'yes' if you wish to continue"
-                if ($input -match 'y') {
-                    Import-Module Storage
+            $ipt = Read-Host "Type 'yes' if you wish to continue"
+            if ($ipt -match 'y') {
+                l3f1 #Function for step 1
+            } elseif ($ipt -match 'n') {exit}
+            Clear-Host
+        }
+    } else {
+        Write-Warning "Warning you do not have enough space to recreate the EFI partition."
+        Read-Host " "
+        exit
+    }
+}
+
+function l3f1 {
+    Import-Module Storage
 #Generates .txt file for new efi partition.
 @"
 select disk $($(Get-Partition -DriveLetter C).DiskNumber)
@@ -139,59 +156,39 @@ select disk $($(Get-Partition -DriveLetter C).DiskNumber)
 select partition $($(Get-Partition | Where-Object {$_.Type -eq "System"}).PartitionNumber[0])
 delete partition override
 "@ | Out-File -FilePath "C:\remove_old_efi.txt" -Encoding ASCII
-
-                    #Suspends Bitlocker
-                    manage-bde.exe -protectors -disable C:
-
-                    if (!(Get-PSDrive -Name $ad[0] -ErrorAction SilentlyContinue)) {
-                        #Mounts Original EFI Partiton to $ad[0]
-                        Get-Partition `
-                            | Where-Object GptType -eq "{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}" `
-                            | Set-Partition -NewDriveLetter $ad[0] | Out-Null
-                    }
-
-                    # Shrink the C: drive by 256 MB
-                    Resize-Partition -DiskNumber 0 -PartitionNumber $(Get-Partition -DriveLetter C).PartitionNumber -Size ($(Get-Partition -DriveLetter C).Size - $esize)
-
-                    #Creates new specialized EFI partition
-                    diskpart /s C:\create_efi.txt
-
-                    try {
-                        #Checks if Z Partition has been made successfully
-                        Get-Partition -DriveLetter Z | Out-Null
-
-                        #Clones old EFI System Partition to New Partition
-                        robocopy $ad[0]:\ $ad[1]:\ /MIR /COPYALL /XJ
-                        cmd.exe /c "bcdboot C:\Windows /s $($ad[1]):"
-                        cmd.exe /c "bcdboot C:\Windows /s $($ad[1]): /f UEFI"
-
-                        #Changes Boot path from C to be updated to newly created Z drive.
-                        cmd.exe /c "bcdedit /set {bootmgr} device partition=$($ad[1]):"
-                        cmd.exe /c "bcdedit /set {current} device partition=C:"
-                        cmd.exe /c "bcdedit /set {current} osdevice partition=C:"
-    
-                        #Unbinds Y path to prevent ghost volumes
-                        Get-Partition -DriveLetter $ad[0] | Remove-PartitionAccessPath -AccessPath "$($ad[0]):\"
-
-                        #Deletes efi .txt file
-                        Remove-Item "C:\create_efi.txt"
-
-                        #Forces a restart
-                        shutdown /r /t 10
-                    } catch {
-                        Remove-Item "C:\create_efi.txt"
-                        Remove-Item "C:\remove_old_efi.txt"
-                        Write-Host "Unable to locate $($ad[1]) drive"
-                    }
-                } elseif ($input -match 'n') {exit}
-                cls
-            }
-            
-        }
-    } else {
-        Write-Warning "Warning you do not have enough space to recreate the EFI partition."
-        Read-Host " "
-        exit
+    #Suspends Bitlocker
+    manage-bde.exe -protectors -disable C:
+    if (!(Get-PSDrive -Name $ad[0] -ErrorAction SilentlyContinue)) {
+        #Mounts Original EFI Partiton to $ad[0]
+        Get-Partition `
+            | Where-Object GptType -eq "{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}" `
+            | Set-Partition -NewDriveLetter $ad[0] | Out-Null
+    }
+    # Shrink the C: drive by $esize
+    Resize-Partition -DiskNumber 0 -PartitionNumber $(Get-Partition -DriveLetter C).PartitionNumber -Size ($(Get-Partition -DriveLetter C).Size - $esize)
+    #Creates new specialized EFI partition
+    diskpart /s C:\create_efi.txt
+    try {
+        #Checks if Z Partition has been made successfully
+        Get-Partition -DriveLetter $ad[1] | Out-Null
+        #Clones old EFI System Partition to New Partition
+        robocopy $ad[0]:\ $ad[1]:\ /MIR /COPYALL /XJ
+        cmd.exe /c "bcdboot C:\Windows /s $($ad[1]):"
+        cmd.exe /c "bcdboot C:\Windows /s $($ad[1]): /f UEFI"
+        #Changes Boot path from C to be updated to newly created Z drive.
+        cmd.exe /c "bcdedit /set {bootmgr} device partition=$($ad[1]):"
+        cmd.exe /c "bcdedit /set {current} device partition=C:"
+        cmd.exe /c "bcdedit /set {current} osdevice partition=C:"
+        #Unbinds Y path to prevent ghost volumes
+        Get-Partition -DriveLetter $ad[0] | Remove-PartitionAccessPath -AccessPath "$($ad[0]):\"
+        #Deletes efi .txt file
+        Remove-Item "C:\create_efi.txt"
+        #Forces a restart
+        shutdown /r /t 10
+    } catch {
+        Remove-Item "C:\create_efi.txt"
+        Remove-Item "C:\remove_old_efi.txt"
+        Write-Host "Unable to locate $($ad[1]) drive"
     }
 }
 
