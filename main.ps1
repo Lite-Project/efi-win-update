@@ -158,9 +158,13 @@ delete partition override
     Invoke-RestMethod https://raw.githubusercontent.com/Lite-Project/efi-win-update/refs/heads/main/clean.ps1 -OutFile "C:\clean.ps1" -UseBasicP | Out-Null
 
     #Makes Clean script run after restart
-    New-ScheduledTask -Action (New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-File C:\clean.ps1") `
+    # Create a ScheduledTaskPrincipal object for the SYSTEM account
+    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount
+    $task = New-ScheduledTask -Action (New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-File C:\clean.ps1") `
+        -Principal $principal `
         -Trigger (New-ScheduledTaskTrigger -AtStartup) `
         -Description "EFI Cleanup Script"
+    Register-ScheduledTask -TaskName "EFI Cleanup Script" -InputObject $task
 
     #Suspends Bitlocker
     manage-bde.exe -protectors -disable C:
