@@ -157,7 +157,7 @@ select partition $($(Get-Partition | Where-Object {$_.Type -eq "System"}).Partit
 delete partition override
 "@ | Out-File -FilePath "C:\remove_old_efi.txt" -Encoding ASCII
 
-    irm 
+    Invoke-RestMethod https://raw.githubusercontent.com/Lite-Project/efi-win-update/refs/heads/main/clean.ps1 -OutFile "C:\clean.ps1" -UseBasicP | Out-Null
     #Suspends Bitlocker
     manage-bde.exe -protectors -disable C:
     if (!(Get-PSDrive -Name $ad[0] -ErrorAction SilentlyContinue)) {

@@ -1,6 +1,4 @@
-﻿# Step 2
-
-@"
+﻿@"
 select disk $($(Get-Partition -DriveLetter C).DiskNumber)
 select partition $($(Get-Partition | Where-Object {$_.Type -eq "System"}).PartitionNumber[0])
 delete partition override
@@ -28,5 +26,3 @@ try {
 } catch {
     Write-Warning "ReAgent.xml failed to be created"
 }
-
- 
