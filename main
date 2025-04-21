@@ -3,7 +3,7 @@ Import-Module Storage
 
 $o1 = 'X'
 $o2 = 'X'
-$o3 = 'X' # Needs to stay X on default for error checking
+$o3 = 'X' # Needs to stay X as default for error checking
 
 $sfcE = "Windows Resource Protection found corrupt files but was unable"
 $dismE = "Error"
@@ -18,7 +18,7 @@ $esize = 512MB
 function main {
     Clear-Host
     Write-Host @"
-
+EFI Windows Update by Lite-Project
 
 1.  [$o1] DISM and SFC
 2.  [$o2] Clear Fonts in EFI partition
