@@ -40,8 +40,7 @@ function main {
             l1
         }
         if ($o2 -eq '✓') {
-            l2
-            if ($o3 -eq '✓') {l2 -L3 $true}
+            if ($o3 -eq '✓') {l2 -L3 $true} else {l2}
         }
         if (($o3 -eq '✓') -and ($o2 -eq 'X')) {
             l3
@@ -85,7 +84,6 @@ function l2 {
     Get-Partition `
         | Where-Object GptType -eq "{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}" `
         | Set-Partition -NewDriveLetter $ad[0]
-
     if ($(Get-PSDrive -Name $ad[0]).Free -le 15MB) {
         #Clears Font folder to make enough space for the windows update
         Remove-Item -Path "$($ad[0]):\EFI\Microsoft\Boot\Fonts\*" -Recurse -Force
