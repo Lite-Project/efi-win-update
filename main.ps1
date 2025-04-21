@@ -117,7 +117,6 @@ function l3 {
 It appears that the less invasive cleanup has not been executed.
 Please re-run the script and select options 2 and 3 to perform the less invasive cleanup prior to proceeding.
 
-
 "@
     if ($($(Get-PSDrive -Name C).Free / 1MB) -ge $($($esize + 5MB) / 1MB)){
         while ($true) {
