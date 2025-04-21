@@ -1,4 +1,6 @@
 ﻿#=====---v---=====#=====---v---=====#=-Default  Param-=#=====---v---=====#=====---v---=====#=====---v---=====#
+Import-Module Storage
+
 $o1 = 'X'
 $o2 = 'X'
 $o3 = 'X' # Needs to stay X on default for error checking
@@ -113,10 +115,74 @@ function l3 {
     if ($($(Get-PSDrive -Name C).Free / 1MB) -ge $($($esize + 5MB) / 1MB)){
         if (!$L3) {
             while ($true) {
-                Write-Warning "It appears that the less invasive cleanup has not been executed. Please re-run the script and select options 2 and 3 to perform the less invasive cleanup prior to proceeding."
+                Write-Warning @"
+#===---~---===#===---~---===#USE AT YOUR OWN RISK#===---~---===#===---~---===#
+It appears that the less invasive cleanup has not been executed.
+Please re-run the script and select options 2 and 3 to perform the less invasive cleanup prior to proceeding.
+
+#===---~---===#===---~---===#USE AT YOUR OWN RISK#===---~---===#===---~---===#
+PLEASE REMEMBER THIS IS STILL EXPERIMENTAL. 
+"@
                 $input = Read-Host "Type 'yes' if you wish to continue"
                 if ($input -match 'y') {
-                    #INSERT SPECIAL SCRIPT
+                    Import-Module Storage
+#Generates .txt file for new efi partition.
+@"
+select disk $($(Get-Partition -DriveLetter C).DiskNumber)
+create partition efi size=$($esize / 1MB)
+format fs=fat32 quick
+assign letter=$($ad[1])
+"@ | Out-File -FilePath "C:\create_efi.txt" -Encoding ASCII
+#Generates .txt file for removing old efi partition.
+@"
+select disk $($(Get-Partition -DriveLetter C).DiskNumber)
+select partition $($(Get-Partition | Where-Object {$_.Type -eq "System"}).PartitionNumber[0])
+delete partition override
+"@ | Out-File -FilePath "C:\remove_old_efi.txt" -Encoding ASCII
+
+                    #Suspends Bitlocker
+                    manage-bde.exe -protectors -disable C:
+
+                    if (!(Get-PSDrive -Name $ad[0] -ErrorAction SilentlyContinue)) {
+                        #Mounts Original EFI Partiton to $ad[0]
+                        Get-Partition `
+                            | Where-Object GptType -eq "{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}" `
+                            | Set-Partition -NewDriveLetter $ad[0] | Out-Null
+                    }
+
+                    # Shrink the C: drive by 256 MB
+                    Resize-Partition -DiskNumber 0 -PartitionNumber $(Get-Partition -DriveLetter C).PartitionNumber -Size ($(Get-Partition -DriveLetter C).Size - $esize)
+
+                    #Creates new specialized EFI partition
+                    diskpart /s C:\create_efi.txt
+
+                    try {
+                        #Checks if Z Partition has been made successfully
+                        Get-Partition -DriveLetter Z | Out-Null
+
+                        #Clones old EFI System Partition to New Partition
+                        robocopy $ad[0]:\ $ad[1]:\ /MIR /COPYALL /XJ
+                        cmd.exe /c "bcdboot C:\Windows /s $($ad[1]):"
+                        cmd.exe /c "bcdboot C:\Windows /s $($ad[1]): /f UEFI"
+
+                        #Changes Boot path from C to be updated to newly created Z drive.
+                        cmd.exe /c "bcdedit /set {bootmgr} device partition=$($ad[1]):"
+                        cmd.exe /c "bcdedit /set {current} device partition=C:"
+                        cmd.exe /c "bcdedit /set {current} osdevice partition=C:"
+    
+                        #Unbinds Y path to prevent ghost volumes
+                        Get-Partition -DriveLetter $ad[0] | Remove-PartitionAccessPath -AccessPath "$($ad[0]):\"
+
+                        #Deletes efi .txt file
+                        Remove-Item "C:\create_efi.txt"
+
+                        #Forces a restart
+                        shutdown /r /t 10
+                    } catch {
+                        Remove-Item "C:\create_efi.txt"
+                        Remove-Item "C:\remove_old_efi.txt"
+                        Write-Host "Unable to locate $($ad[1]) drive"
+                    }
                 } elseif ($input -match 'n') {exit}
                 cls
             }
