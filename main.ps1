@@ -63,7 +63,7 @@ function l1 {
     if ($sout -match $sfcE) {
         Write-Output $sout
         Read-Host "The process will now exit. Please resolve the issue before retrying."
-        exit
+        break
     }
     & cmd.exe /c "dism /online /cleanup-image /restorehealth" 2>&1 | ForEach-Object {
         Clear-Host
@@ -73,7 +73,7 @@ function l1 {
     if ($dout -match $dismE) {
         Write-Output $dout
         Read-Host "The process will now exit. Please resolve the issue before retrying."
-        exit
+        break
     }
 
     Write-Host "DISM ran successfully."
@@ -130,13 +130,13 @@ PLEASE REMEMBER THIS IS STILL EXPERIMENTAL.
             $ipt = Read-Host "Type 'yes' if you wish to continue"
             if ($ipt -match 'y') {
                 l3f1 #Function for step 1
-            } elseif ($ipt -match 'n') {exit}
+            } elseif ($ipt -match 'n') {break}
             Clear-Host
         }
     } else {
         Write-Warning "Warning you do not have enough space to recreate the EFI partition."
         Read-Host " "
-        exit
+        break
     }
 }
 
