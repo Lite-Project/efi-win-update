@@ -162,8 +162,6 @@ delete partition override
     #Makes Clean script run after restart
     New-ScheduledTask -Action (New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-File C:\clean.ps1") `
         -Trigger (New-ScheduledTaskTrigger -AtStartup) `
-        -RunLevel Highest `
-        -User "SYSTEM" `
         -Description "EFI Cleanup Script"
 
     #Suspends Bitlocker
@@ -195,11 +193,14 @@ delete partition override
         Remove-Item "C:\create_efi.txt"
         #Forces a restart
         shutdown /r /t 10
+        Read-Host "System is restarting in 10 seconds."
+        
     } catch {
         Remove-Item "C:\create_efi.txt"
         Remove-Item "C:\remove_old_efi.txt"
         Write-Host "Unable to locate $($ad[1]) drive"
     }
+    break
 }
 
 main
