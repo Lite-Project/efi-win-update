@@ -9,7 +9,7 @@
 
 Enter the command below into Powershell with Admin
 ```ps
-irm https://raw.githubusercontent.com/Lite-Project/efi-win-update/refs/heads/main/main | iex
+irm raw.githubusercontent.com/Lite-Project/efi-win-update/refs/heads/main/main | iex
 ```
 
 
