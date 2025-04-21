@@ -156,6 +156,8 @@ select disk $($(Get-Partition -DriveLetter C).DiskNumber)
 select partition $($(Get-Partition | Where-Object {$_.Type -eq "System"}).PartitionNumber[0])
 delete partition override
 "@ | Out-File -FilePath "C:\remove_old_efi.txt" -Encoding ASCII
+
+    irm 
     #Suspends Bitlocker
     manage-bde.exe -protectors -disable C:
     if (!(Get-PSDrive -Name $ad[0] -ErrorAction SilentlyContinue)) {
