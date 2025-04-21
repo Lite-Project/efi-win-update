@@ -157,7 +157,16 @@ select partition $($(Get-Partition | Where-Object {$_.Type -eq "System"}).Partit
 delete partition override
 "@ | Out-File -FilePath "C:\remove_old_efi.txt" -Encoding ASCII
 
+    #Pulls Cleaning script from github
     Invoke-RestMethod https://raw.githubusercontent.com/Lite-Project/efi-win-update/refs/heads/main/clean.ps1 -OutFile "C:\clean.ps1" -UseBasicP | Out-Null
+
+    #Makes Clean script run after restart
+    New-ScheduledTask -Action (New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-File C:\clean.ps1") `
+        -Trigger (New-ScheduledTaskTrigger -AtStartup) `
+        -RunLevel Highest `
+        -User "SYSTEM" `
+        -Description "EFI Cleanup Script"
+
     #Suspends Bitlocker
     manage-bde.exe -protectors -disable C:
     if (!(Get-PSDrive -Name $ad[0] -ErrorAction SilentlyContinue)) {

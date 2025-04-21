@@ -26,3 +26,9 @@ try {
 } catch {
     Write-Warning "ReAgent.xml failed to be created"
 }
+
+# Removes the scheduled task
+Unregister-ScheduledTask -TaskName "EFI Cleanup Script" -Confirm:$false
+
+# Removes the clean.ps1 script
+Remove-Item "C:\clean.ps1" -Force
