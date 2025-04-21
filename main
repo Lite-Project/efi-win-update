@@ -105,7 +105,11 @@ function l2 {
             } elseif ($ipt -match 'n') {exit}
             Clear-Host
         }
-    } else {Get-Partition -DriveLetter $ad[0] | Remove-PartitionAccessPath -AccessPath "$($ad[0]):\"}
+    } else {
+        Get-Partition -DriveLetter $ad[0] | Remove-PartitionAccessPath -AccessPath "$($ad[0]):\"
+        Read-Host "Press Enter to exit"
+        break
+    }
 }
 
 function l3 {
